@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Talep Listesi</title>
+    <!-- Bootstrap CSS -->
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css"
+      rel="stylesheet"
+    />
+  </head>
+  <body>
+    <div class="container mt-5">
+      <h1 class="mb-4">Talep Listesi</h1>
+      <table class="table table-bordered">
+        <thead>
+          <tr>
+            <th>Talep No</th>
+            <th>Geliş Tarihi</th>
+            <th>Bitiş Tarihi</th>
+            <th>Gönderen Kişi</th>
+            <th>Gelen Birim</th>
+            <th>Sorun</th>
+            <th>Bilgisayar Özellikleri</th>
+            <th>Yapılan İşlem</th>
+            <th>Tamamlandı</th>
+            <th>Değişikliği</th>
+          </tr>
+        </thead>
+        <tbody id="talepListesi"></tbody>
+      </table>
+    </div>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+    <script>
+      fetch("/api/taleps")
+        .then((res) => res.json())
+        .then((taleps) => {
+          let talepListesi = document.getElementById("talepListesi");
+          taleps.forEach((talep) => {
+            const row = document.createElement("tr");
+            row.innerHTML = `
+                      <td> ${talep.talepNo} </td>
+                      <td> ${new Date(
+                        talep.gelisTarihi
+                      ).toLocaleDateString()} </td>
+                      <td> ${
+                        talep.bitisTarihi
+                          ? new Date(talep.bitisTarihi).toLocaleDateString()
+                          : "-"
+                      } </td>
+                      <td> ${talep.gonderenKisi} </td>
+                      <td> ${talep.gelenBirim} </td>
+                      <td> ${talep.sorun} </td>
+                      <td> ${talep.bilgisayarOzellikleri}</td>
+                      <td> ${talep.yapilanIslem}</td>
+                      <td>
+                          <select class="form-select tamamlandi-dropdown" data-id="${
+                            talep._id
+                          }" data-original-value="${talep.tamamlandi}">
+                              <option value="Evet" ${
+                                talep.tamamlandi === "Evet" ? "selected" : ""
+                              }>Evet</option>
+                              <option value="Hayır" ${
+                                talep.tamamlandi === "Hayır" ? "selected" : ""
+                              }>Hayır</option>
+                          </select>
+                      </td>
+                      <td> <button class="btn btn-primary btn-save" data-id="${
+                        talep._id
+                      }" disabled>Kaydet</button>
+                           <button class="btn btn-danger btn-cancel" data-id="${
+                             talep._id
+                           }" disabled>İptal</button>
+                      </td>
+                  `;
+            talepListesi.appendChild(row);
+
+            // Dropdown değişikliklerini izlemek ve butonları etkinleştirmek
+            document
+              .querySelectorAll(".tamamlandi-dropdown")
+              .forEach((dropdown) => {
+                dropdown.addEventListener("change", function () {
+                  const row = this.closest("tr");
+                  const saveButton = row.querySelector(".btn-save");
+                  const cancelButton = row.querySelector(".btn-cancel");
+                  saveButton.disabled = false;
+                  cancelButton.disabled = false;
+                });
+              });
+
+            // Kaydet butonunu izlemek ve değişikliği kaydetmek
+            document.querySelectorAll(".btn-save").forEach((button) => {
+              button.addEventListener("click", function () {
+                const row = this.closest("tr");
+                const dropdown = row.querySelector(".tamamlandi-dropdown");
+                const tamamlandi = dropdown.value;
+                const talepId = dropdown.getAttribute("data-id");
+
+                fetch(`/api/talep/${talepId}/update`, {
+                  method: "POST",
+                  headers: {
+                    "Content-Type": "application/json",
+                  },
+                  body: JSON.stringify({ tamamlandi }),
+                })
+                  .then((res) => res.json())
+                  .then((data) => {
+                    console.log("Güncelleme başarılı:", data);
+                    // Butonları tekrar devre dışı bırakma
+                    this.disabled = true;
+                    row.querySelector(".btn-cancel").disabled = true;
+                    // Dropdown'un orijinal değeri güncelle
+                    dropdown.setAttribute("data-original-value", tamamlandi);
+                  })
+                  .catch((error) => console.error("Güncelleme hatası:", error));
+              });
+            });
+
+            // İptal butonunu izlemek ve değişikliği geri alma
+            document.querySelectorAll(".btn-cancel").forEach((button) => {
+              button.addEventListener("click", function () {
+                const row = this.closest("tr");
+                const dropdown = row.querySelector(".tamamlandi-dropdown");
+                // Dropdown'un orijinal değerini geri yükleme
+                dropdown.value = dropdown.getAttribute("data-original-value");
+                // Butonları tekrar devre dışı bırakma
+                row.querySelector(".btn-save").disabled = true;
+                this.disabled = true;
+              });
+            });
+            
+          });
+        })
+        .catch((error) =>
+          console.error("API verilerini çekerken hata:", error)
+        );
+    </script>
+  </body>
+</html>

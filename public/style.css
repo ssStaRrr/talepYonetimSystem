@@ -1,0 +1,6 @@
+
+/* Disabled textarea stilini ayarlamak için CSS */
+.form-control[readonly] {
+    background-color: #e9ecef; /* Gri renk */
+    opacity: 1; /* Saydamlığı kaldır */
+}
